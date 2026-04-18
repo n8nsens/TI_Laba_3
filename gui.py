@@ -24,15 +24,32 @@ class ElGamalApp:
         self._build_ui()
 
     def _apply_style(self):
+    # === ТВОИ ЦВЕТА ===
+        BG_COLOR = "#FFC0CB"       # розовый фон
+        BTN_COLOR = "#FF738b"      # кнопки
+        ENTRY_COLOR = "#FFD7DE"    # поля ввода
+    
         s = ttk.Style()
         s.theme_use("clam")
-        s.configure(".", background="#f5f5f5", font=("Segoe UI", 10))
-        s.configure("TLabel", background="#f5f5f5")
-        s.configure("TLabelframe", background="#f5f5f5")
-        s.configure("TLabelframe.Label", font=("Segoe UI", 11, "bold"))
-        s.configure("TButton", padding=6)
-        s.configure("RootCount.TLabel", font=("Segoe UI", 14, "bold"), foreground="#003399", background="#e8effc")
-
+    
+    # Применяем цвета ко всем элементам
+        s.configure(".", background=BG_COLOR, font=("Segoe UI", 10))
+        s.configure("TLabel", background=BG_COLOR, foreground="#000000")
+        s.configure("TLabelframe", background=BG_COLOR, foreground="#000000")
+        s.configure("TLabelframe.Label", background=BG_COLOR, foreground="#000000", font=("Segoe UI", 11, "bold"))
+        s.configure("TButton", background=BTN_COLOR, foreground="#000000", font=("Segoe UI", 10))
+        s.configure("RootCount.TLabel", font=("Segoe UI", 14, "bold"), foreground="#003399", background=ENTRY_COLOR)
+    
+    # Для полей ввода (tk.Entry, не ttk)
+        self.root.option_add("*Entry.background", ENTRY_COLOR)
+        self.root.option_add("*Entry.foreground", "#000000")
+        self.root.option_add("*Entry.font", "Segoe UI 10")
+    
+    # Для текстового лога
+        self.root.option_add("*Text.background", "#FFE4E9")
+        self.root.option_add("*Text.foreground", "#000000")
+        self.root.option_add("*Text.font", "Consolas 10")
+        
     def _enable_paste(self, entry):
         entry.bind("<Control-v>", lambda e: self._do_paste(entry))
         entry.bind("<Control-V>", lambda e: self._do_paste(entry))
