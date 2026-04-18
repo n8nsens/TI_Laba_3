@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 import os
-import algos
+import algorithm
 import math
 
 class ElGamalApp:
@@ -64,7 +64,7 @@ class ElGamalApp:
             messagebox.showerror("Ошибка ввода", "Поля p и x должны содержать целые числа.")
             return None
 
-        if not algos.is_prime(p):
+        if not algorithm.is_prime(p):
             messagebox.showerror("Ошибка", "Модуль p должен быть простым числом.")
             return None
 
@@ -132,7 +132,6 @@ class ElGamalApp:
         e_k = ttk.Entry(frm_param, textvariable=self.k_var, width=16)
         e_k.grid(row=3, column=1, sticky="w", padx=5, pady=6)
         self._enable_paste(e_k)
-        ttk.Label(frm_param, text="(вводится для первого блока, остальные генерируются)").grid(row=3, column=2, columnspan=3, sticky="w", padx=10, pady=6)
 
         frm_file = ttk.LabelFrame(main, text="Файл")
         frm_file.pack(fill=tk.X, pady=(0, 10))
@@ -168,13 +167,13 @@ class ElGamalApp:
         if p is None:
             messagebox.showerror("Ошибка ввода", "Введите корректное целое число для p.")
             return
-        if not algos.is_prime(p):
+        if not algorithm.is_prime(p):
             messagebox.showerror("Ошибка", "Число p должно быть простым.")
             return
 
         self.lb_roots.delete(0, tk.END)
         self._log("Поиск первообразных корней для p = {}...".format(p))
-        roots = algos.find_primitive_roots(p)
+        roots = algorithm.find_primitive_roots(p)
         
         if not roots:
             self._log("Корней не найдено.")
@@ -203,7 +202,7 @@ class ElGamalApp:
         self._log("Начало шифрования файла: {}".format(params["path"]))
         with open(params["path"], "rb") as f: data = f.read()
         
-        self.encrypted_blocks, self.padding_len = algos.elgamal_encrypt(
+        self.encrypted_blocks, self.padding_len = algorithm.elgamal_encrypt(
             data, params["p"], params["g"], params["x"], params["k"]
         )
 
@@ -244,7 +243,7 @@ class ElGamalApp:
             blocks.append((a, b))
 
         self._log("Начало расшифрования файла: {}".format(fpath))
-        dec_bytes, dec_vals = algos.elgamal_decrypt(blocks, params["p"], params["x"], self.padding_len)
+        dec_bytes, dec_vals = algorithm.elgamal_decrypt(blocks, params["p"], params["x"], self.padding_len)
 
         self._log("Восстановленные блоки (2 байта, десятичная система):")
         for i, val in enumerate(dec_vals):
