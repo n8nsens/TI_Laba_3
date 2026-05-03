@@ -23,7 +23,6 @@ class ElGamalApp:
     def _setup_style(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
         style.configure("Blue.TLabel", font=("Segoe UI", 16, "bold"), foreground="#0056b3")
         style.configure("Card.TLabelframe", padding=15)
 
@@ -45,43 +44,37 @@ class ElGamalApp:
 
         ttk.Button(inputs_grid, text="Проверить параметры", command=self.validate_all_inputs).grid(row=0, column=6, padx=10)
 
+        # Корни
         roots_section = ttk.Frame(params_frame)
         roots_section.pack(fill=tk.X, pady=10)
-
         ttk.Label(roots_section, textvariable=self.root_count_var, style="Blue.TLabel").pack(anchor="w", pady=(0, 10))
 
         list_container = ttk.Frame(roots_section)
         list_container.pack(fill=tk.X)
-
         self.lb_roots = tk.Listbox(list_container, height=6, font=("Consolas", 10), exportselection=False)
         self.lb_roots.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        scroller = ttk.Scrollbar(list_container, orient="vertical", command=self.lb_roots.yview)
-        scroller.pack(side=tk.LEFT, fill=tk.Y)
-        self.lb_roots.config(yscrollcommand=scroller.set)
+        ttk.Scrollbar(list_container, orient="vertical", command=self.lb_roots.yview).pack(side=tk.LEFT, fill=tk.Y)
 
         btns_roots = ttk.Frame(roots_section)
         btns_roots.pack(fill=tk.X, pady=5)
-        
-        ttk.Button(btns_roots, text="Найти все корни g", command=self.find_roots).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btns_roots, text="Найти корни g", command=self.find_roots).pack(side=tk.LEFT, padx=5)
         ttk.Button(btns_roots, text="Выбрать выделенный", command=self.select_g).pack(side=tk.LEFT, padx=5)
         self.lbl_g_display = ttk.Label(btns_roots, text="Выбран g: ---", font=("Segoe UI", 10, "bold"))
         self.lbl_g_display.pack(side=tk.LEFT, padx=15)
 
+        # Файл
         file_frame = ttk.Frame(container, padding=5)
         file_frame.pack(fill=tk.X, pady=10)
-        
         ttk.Label(file_frame, text="Файл:").pack(side=tk.LEFT)
         ttk.Entry(file_frame, textvariable=self.file_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         ttk.Button(file_frame, text="Обзор", command=self.browse_file).pack(side=tk.LEFT)
 
+        # Действия
         actions_frame = ttk.Frame(container)
         actions_frame.pack(fill=tk.X, pady=10)
-        
         ttk.Button(actions_frame, text="ЗАШИФРОВАТЬ", command=self.encrypt).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
         ttk.Button(actions_frame, text="РАСШИФРОВАТЬ", command=self.decrypt).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        ttk.Label(container, text="Журнал событий:").pack(anchor="w")
         self.txt_log = scrolledtext.ScrolledText(container, height=12, font=("Consolas", 9), state="disabled")
         self.txt_log.pack(fill=tk.BOTH, expand=True, pady=5)
 
@@ -92,6 +85,7 @@ class ElGamalApp:
         self.txt_log.configure(state="disabled")
 
     def validate_all_inputs(self):
+        """Возвращенная упрощенная проверка"""
         self._log_status("--- Проверка параметров ---")
         try:
             p = int(self.p_var.get())
@@ -100,7 +94,7 @@ class ElGamalApp:
             elif p <= 255:
                 self._log_status(f"ОШИБКА: p={p} должно быть > 255.")
             else:
-                self._log_status(f"ОК: p подходит.")
+                self._log_status(f"ОК: p={p} подходит.")
 
             x = int(self.x_var.get())
             if not (1 < x < p - 1):
@@ -130,8 +124,7 @@ class ElGamalApp:
             for r in roots: self.lb_roots.insert(tk.END, r)
             self.root_count_var.set(f"Найдено корней: {len(roots)}")
             self._log_status(f"Найдено {len(roots)} корней.")
-        except:
-            messagebox.showerror("Ошибка", "Проверьте число p")
+        except: messagebox.showerror("Ошибка", "Проверьте число p")
 
     def select_g(self):
         sel = self.lb_roots.curselection()
@@ -145,43 +138,43 @@ class ElGamalApp:
         try:
             p, g, x, k = int(self.p_var.get()), self.g_var.get(), int(self.x_var.get()), int(self.k_var.get())
             path = self.file_var.get()
-            if not path: raise ValueError("Выберите файл")
-            
+            if not path: return
             with open(path, "rb") as f: data = f.read()
             blocks, _ = algorithm.elgamal_encrypt(data, p, g, x, k)
-            
             out_path = path + ".enc"
             with open(out_path, "wb") as f:
                 for a, b in blocks:
                     f.write(a.to_bytes(2, 'big'))
                     f.write(b.to_bytes(2, 'big'))
             self._log_status(f"Зашифровано: {out_path}")
-            messagebox.showinfo("Успех", "Шифрование завершено")
-        except Exception as e:
-            messagebox.showerror("Ошибка", str(e))
+        except Exception as e: messagebox.showerror("Ошибка", str(e))
 
     def decrypt(self):
         try:
             p, x = int(self.p_var.get()), int(self.x_var.get())
             path = self.file_var.get()
-            with open(path, "rb") as f:
-                data = f.read()
-            
+            if not path.endswith(".enc"): return
+            with open(path, "rb") as f: data = f.read()
             blocks = []
             for i in range(0, len(data), 4):
                 a = int.from_bytes(data[i:i+2], 'big')
                 b = int.from_bytes(data[i+2:i+4], 'big')
                 blocks.append((a, b))
-            
             dec_bytes, _ = algorithm.elgamal_decrypt(blocks, p, x, 0)
-            save_path = filedialog.asksaveasfilename()
+            
+            original_path = path[:-4]
+            ext = os.path.splitext(original_path)[1]
+            save_path = filedialog.asksaveasfilename(
+                initialfile=os.path.basename(original_path),
+                defaultextension=ext,
+                filetypes=[("Original format", f"*{ext}"), ("All files", "*.*")]
+            )
             if save_path:
                 with open(save_path, "wb") as f: f.write(dec_bytes)
                 self._log_status(f"Расшифровано: {save_path}")
-        except Exception as e:
-            messagebox.showerror("Ошибка", str(e))
+        except Exception as e: messagebox.showerror("Ошибка", str(e))
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = ElGamalApp(root)
+    ElGamalApp(root)
     root.mainloop()

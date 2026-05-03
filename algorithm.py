@@ -5,8 +5,7 @@ def fast_pow(base: int, exp: int, mod: int) -> int:
     res = 1
     base %= mod
     while exp > 0:
-        if exp & 1:
-            res = (res * base) % mod
+        if exp & 1: res = (res * base) % mod
         base = (base * base) % mod
         exp >>= 1
     return res
@@ -21,90 +20,50 @@ def egcd(a: int, b: int) -> tuple[int, int, int]:
 
 def modinv(a: int, m: int) -> int:
     g, x, _ = egcd(a % m, m)
-    if g != 1:
-        raise ValueError(f"gcd({a}, {m}) != 1. Обратный элемент не существует.")
+    if g != 1: raise ValueError("Обратного элемента нет")
     return x % m
 
 def is_prime(n: int) -> bool:
     if n < 2: return False
-    if n in (2, 3): return True
-    if n % 2 == 0 or n % 3 == 0: return False
-    i = 5
-    while i * i <= n:
-        if n % i == 0 or n % (i + 2) == 0:
-            return False
-        i += 6
+    for i in range(2, int(math.sqrt(n)) + 1):
+        if n % i == 0: return False
     return True
-
-def prime_factors(n: int) -> list[int]:
-    factors = []
-    d = 2
-    while d * d <= n:
-        if n % d == 0:
-            factors.append(d)
-            while n % d == 0:
-                n //= d
-        d += 1
-    if n > 1:
-        factors.append(n)
-    return factors
 
 def find_primitive_roots(p: int) -> list[int]:
     if not is_prime(p): return []
     phi = p - 1
-    factors = prime_factors(phi)
+    factors = []
+    d, n = 2, phi
+    while d * d <= n:
+        if n % d == 0:
+            factors.append(d)
+            while n % d == 0: n //= d
+        d += 1
+    if n > 1: factors.append(n)
+    
     roots = []
     for g in range(2, p):
         if all(fast_pow(g, phi // q, p) != 1 for q in factors):
             roots.append(g)
     return roots
 
-BLOCK_SIZE = 1 
-
 def elgamal_encrypt(data: bytes, p: int, g: int, x: int, initial_k: int) -> tuple[list[tuple[int, int]], int]:
-    if not is_prime(p):
-        raise ValueError("Модуль p должен быть простым числом.")
-    if p <= 255:
-        raise ValueError("Для шифрования байта модуль p должен быть > 255")
-    if p > 65535:
-        raise ValueError("Чтобы результат помещался в 2 байта, p должен быть <= 65535")
-    if not (1 < x < p - 1):
-        raise ValueError("Закрытый ключ x должен удовлетворять: 1 < x < p-1")
-    if not (1 < initial_k < p - 1) or math.gcd(initial_k, p - 1) != 1:
-        raise ValueError("Начальный k должен быть: 1 < k < p-1 и gcd(k, p-1) == 1")
-
     y = fast_pow(g, x, p)
     blocks = []
     random.seed(initial_k)
-    k = initial_k 
-
-    for i in range(len(data)):
-        m = data[i]
-        
-        if i > 0:
-            while True:
-                k = random.randint(2, p - 2)
-                if math.gcd(k, p - 1) == 1:
-                    break
-
+    k = initial_k
+    for m in data:
         a = fast_pow(g, k, p)
         b = (m * fast_pow(y, k, p)) % p
         blocks.append((a, b))
-
+        while True:
+            k = random.randint(2, p - 2)
+            if math.gcd(k, p - 1) == 1: break
     return blocks, 0
 
 def elgamal_decrypt(blocks: list[tuple[int, int]], p: int, x: int, padding_len: int) -> tuple[bytes, list[int]]:
-    if not is_prime(p):
-        raise ValueError("Модуль p должен быть простым числом.")
-    
-    decrypted_vals = []
     byte_stream = bytearray()
-
     for a, b in blocks:
-        ax = fast_pow(a, x, p)
-        inv_ax = modinv(ax, p)
-        m = (b * inv_ax) % p
-        decrypted_vals.append(m)
+        m = (b * modinv(fast_pow(a, x, p), p)) % p
         byte_stream.append(m)
-        
-    return bytes(byte_stream), decrypted_vals
+    return bytes(byte_stream), []
