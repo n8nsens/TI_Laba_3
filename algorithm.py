@@ -1,7 +1,6 @@
 import math
 import random
 
-
 def fast_pow(base: int, exp: int, mod: int) -> int:
     res = 1
     base %= mod
@@ -60,36 +59,28 @@ def find_primitive_roots(p: int) -> list[int]:
             roots.append(g)
     return roots
 
-BLOCK_SIZE = 2  
+BLOCK_SIZE = 1 
 
 def elgamal_encrypt(data: bytes, p: int, g: int, x: int, initial_k: int) -> tuple[list[tuple[int, int]], int]:
     if not is_prime(p):
         raise ValueError("Модуль p должен быть простым числом.")
-    if p <= (2 ** (BLOCK_SIZE * 8) - 1):
-        raise ValueError(f"Для блоков {BLOCK_SIZE} байта модуль p должен быть > {(2**(BLOCK_SIZE*8)-1)}")
+    if p <= 255:
+        raise ValueError("Для шифрования байта модуль p должен быть > 255")
+    if p > 65535:
+        raise ValueError("Чтобы результат помещался в 2 байта, p должен быть <= 65535")
     if not (1 < x < p - 1):
         raise ValueError("Закрытый ключ x должен удовлетворять: 1 < x < p-1")
     if not (1 < initial_k < p - 1) or math.gcd(initial_k, p - 1) != 1:
         raise ValueError("Начальный k должен быть: 1 < k < p-1 и gcd(k, p-1) == 1")
 
-    roots = find_primitive_roots(p)
-    if g not in roots:
-        raise ValueError("g не является первообразным корнем по модулю p")
-
-    padding_len = (BLOCK_SIZE - len(data) % BLOCK_SIZE) % BLOCK_SIZE
-    padded = data + b'\x00' * padding_len
-
     y = fast_pow(g, x, p)
     blocks = []
-
     random.seed(initial_k)
     k = initial_k 
 
-    for i in range(0, len(padded), BLOCK_SIZE):
-        m = int.from_bytes(padded[i:i+BLOCK_SIZE], 'big')
-        if m >= p:
-            raise RuntimeError(f"Блок {m} >= p. Увеличьте p.")
-
+    for i in range(len(data)):
+        m = data[i]
+        
         if i > 0:
             while True:
                 k = random.randint(2, p - 2)
@@ -100,25 +91,20 @@ def elgamal_encrypt(data: bytes, p: int, g: int, x: int, initial_k: int) -> tupl
         b = (m * fast_pow(y, k, p)) % p
         blocks.append((a, b))
 
-    return blocks, padding_len
+    return blocks, 0
 
 def elgamal_decrypt(blocks: list[tuple[int, int]], p: int, x: int, padding_len: int) -> tuple[bytes, list[int]]:
     if not is_prime(p):
         raise ValueError("Модуль p должен быть простым числом.")
-    if not (1 < x < p - 1):
-        raise ValueError("Неверный закрытый ключ x")
-
+    
     decrypted_vals = []
-    byte_stream = b''
+    byte_stream = bytearray()
 
     for a, b in blocks:
         ax = fast_pow(a, x, p)
         inv_ax = modinv(ax, p)
         m = (b * inv_ax) % p
         decrypted_vals.append(m)
-        byte_stream += m.to_bytes(BLOCK_SIZE, 'big')
-
-    if padding_len > 0:
-        byte_stream = byte_stream[:-padding_len]
+        byte_stream.append(m)
         
-    return byte_stream, decrypted_vals
+    return bytes(byte_stream), decrypted_vals
