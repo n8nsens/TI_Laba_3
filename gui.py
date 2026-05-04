@@ -85,7 +85,6 @@ class ElGamalApp:
         self.txt_log.configure(state="disabled")
 
     def validate_all_inputs(self):
-        """Возвращенная упрощенная проверка"""
         self._log_status("--- Проверка параметров ---")
         try:
             p = int(self.p_var.get())
@@ -140,13 +139,18 @@ class ElGamalApp:
             path = self.file_var.get()
             if not path: return
             with open(path, "rb") as f: data = f.read()
+            
             blocks, _ = algorithm.elgamal_encrypt(data, p, g, x, k)
+            
+            self._log_status("Результат шифрования (пары a, b):")
             out_path = path + ".enc"
             with open(out_path, "wb") as f:
                 for a, b in blocks:
                     f.write(a.to_bytes(2, 'big'))
                     f.write(b.to_bytes(2, 'big'))
-            self._log_status(f"Зашифровано: {out_path}")
+                    self._log_status(f"({a}, {b})")
+            
+            self._log_status(f"Готово: {out_path}")
         except Exception as e: messagebox.showerror("Ошибка", str(e))
 
     def decrypt(self):
@@ -155,13 +159,16 @@ class ElGamalApp:
             path = self.file_var.get()
             if not path.endswith(".enc"): return
             with open(path, "rb") as f: data = f.read()
+            
             blocks = []
             for i in range(0, len(data), 4):
                 a = int.from_bytes(data[i:i+2], 'big')
                 b = int.from_bytes(data[i+2:i+4], 'big')
                 blocks.append((a, b))
-            dec_bytes, _ = algorithm.elgamal_decrypt(blocks, p, x, 0)
             
+            dec_bytes, _ = algorithm.elgamal_decrypt(blocks, p, x, 0)
+        
+
             original_path = path[:-4]
             ext = os.path.splitext(original_path)[1]
             save_path = filedialog.asksaveasfilename(
@@ -171,7 +178,7 @@ class ElGamalApp:
             )
             if save_path:
                 with open(save_path, "wb") as f: f.write(dec_bytes)
-                self._log_status(f"Расшифровано: {save_path}")
+                self._log_status(f"Восстановлено: {save_path}")
         except Exception as e: messagebox.showerror("Ошибка", str(e))
 
 if __name__ == "__main__":
